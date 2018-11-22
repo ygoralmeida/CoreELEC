@@ -1,0 +1,28 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 0riginally created by Escalade (https://github.com/escalade)
+# Copyright (C) 2018-present 5schatten (https://github.com/5schatten)
+
+. /etc/profile
+
+if [ ! -f /storage/.vice/sdl-vicerc ]; then
+  mkdir -p /storage/.vice
+  cp /etc/sdl-vicerc /storage/.vice/
+fi
+
+# Freeze Kodi / stop audio
+kodifreeze.sh freeze
+
+# Change refresh rate to 50Hz
+set_refresh_rate_50
+
+# Set SDL audio driver to Pulseaudio or ALSA
+set_SDL_audiodriver
+
+x64 "$@" > /var/log/x64.log 2>&1
+
+# Change refresh rate to 60Hz
+set_refresh_rate_60
+
+# Switch back to ES or unfreeze Kodi
+pidof emulationstation > /dev/null 2>&1 || kodifreeze.sh unfreeze

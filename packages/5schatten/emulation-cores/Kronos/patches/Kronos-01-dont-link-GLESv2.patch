@@ -1,0 +1,12 @@
+--- a/libretro/Makefile
++++ b/libretro/Makefile
+@@ -47,7 +47,7 @@
+ 	TARGET := $(TARGET_NAME)_libretro.so
+ 	fpic := -fPIC
+ 	SHARED := -shared -Wl,--no-undefined -Wl,--version-script=link.T
+-	LDFLAGS += -lpthread -lGL -lGLESv2
++	LDFLAGS += -lpthread -lGL
+ 	FLAGS += -DARCH_IS_LINUX=1
+ 	# ARM
+ 	ifneq (,$(findstring armv,$(platform)))
+

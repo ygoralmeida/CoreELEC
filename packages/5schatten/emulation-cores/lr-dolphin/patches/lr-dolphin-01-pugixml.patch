@@ -1,0 +1,18 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -553,12 +553,8 @@
+ add_subdirectory(Externals/Bochs_disasm)
+ add_subdirectory(Externals/cpp-optparse)
+ add_subdirectory(Externals/glslang)
+-
+-find_package(pugixml)
+-if(NOT pugixml_FOUND)
+-  message(STATUS "Using static pugixml from Externals")
+-  add_subdirectory(Externals/pugixml)
+-endif()
++add_subdirectory(Externals/pugixml)
++
+ 
+ if(USE_SHARED_ENET)
+   check_lib(ENET libenet enet enet/enet.h QUIET)
+

@@ -1,0 +1,75 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 0riginally created by Escalade (https://github.com/escalade)
+# Copyright (C) 2018-present 5schatten (https://github.com/5schatten)
+
+. /etc/profile
+
+DOCKER_PATH=/storage/.kodi/addons/service.system.docker/bin/docker
+DOCKER_IMAGE=5schatten/arch-pcsx2
+PCSX2_LOG=/var/log/pcsx2.log
+
+if [ -x $DOCKER_PATH ]; then
+  kodifreeze.sh freeze > $PCSX2_LOG 2>&1
+  $DOCKER_PATH -v >> $PCSX2_LOG 2>&1
+
+  if ! docker images | grep $DOCKER_IMAGE > /dev/null; then
+    echo "############################" >> $PCSX2_LOG 2>&1
+    echo "# Pulling the Docker image #" >> $PCSX2_LOG 2>&1
+    echo "############################" >> $PCSX2_LOG 2>&1
+    docker pull $DOCKER_IMAGE >> $PCSX2_LOG 2>&1
+  fi
+
+  if docker images | grep $DOCKER_IMAGE > /dev/null; then
+    echo "######################################################" >> $PCSX2_LOG 2>&1
+    echo "# Checking for image updates & clean up if necessary #" >> $PCSX2_LOG 2>&1
+    echo "######################################################" >> $PCSX2_LOG 2>&1
+    docker pull $DOCKER_IMAGE:latest >> $PCSX2_LOG 2>&1
+    docker image prune -f >> $PCSX2_LOG 2>&1
+
+    echo "##################" >> $PCSX2_LOG 2>&1
+    echo "# Starting PCSX2 #" >> $PCSX2_LOG 2>&1
+    echo "##################" >> $PCSX2_LOG 2>&1
+
+    # Stop FluidSynth / set audio driver to ALSA
+    RR_ADVANCED_CONF=/storage/.config/rr-config/advanced.conf
+    RR_AUDIO_BACKEND=$(cat ${RR_ADVANCED_CONF} | grep RR_AUDIO_BACKEND= | cut -f2- -d"=")
+
+    if [ ${RR_AUDIO_BACKEND} = "PulseAudio" ] && [ -f /var/run/fluidsynth.run ]; then
+      stop_FluidSynth_PA
+      export SDL_AUDIODRIVER=alsa
+      usleep 500000
+    fi
+
+    DOCKER_ARGS=" \
+    --rm \
+    --name arch-pcsx2 \
+    --privileged \
+    -i \
+    -e DISPLAY=:0.0 \
+    -v /dev/shm:/dev/shm \
+    -v /var/media:/media \
+    -v /var/run/localtime:/etc/localtime
+    -v /storage:/storage \
+    -v /storage/.config/asound.conf:/etc/asound.conf \
+    -v /storage/.config/PCSX2:/root/.config/PCSX2 \
+    -v /storage/roms/bios:/root/.config/PCSX2/bios \
+    -v /tmp/.X11-unix:/tmp/.X11-unix"
+
+    $DOCKER_PATH run $DOCKER_ARGS $DOCKER_IMAGE /usr/bin/PCSX2 "$@" >> $PCSX2_LOG 2>&1
+
+    # Set audio driver to PulseAudio / start FluidSynth
+    if [ ${RR_AUDIO_BACKEND} = "PulseAudio" ] && [ ! -f /var/run/fluidsynth.run ]; then
+      export SDL_AUDIODRIVER=pulseaudio
+      start_FluidSynth_PA
+      usleep 500000
+    fi
+
+    # Switch back to ES or unfreeze Kodi
+    pidof emulationstation > /dev/null 2>&1 || kodifreeze.sh unfreeze
+  fi
+else
+  echo "######################################################################################################" > $PCSX2_LOG 2>&1
+  echo "# The Docker addon is missing. Please check out the Kodi addons, install Docker and run PCSX2 again. #" >> $PCSX2_LOG 2>&1
+  echo "######################################################################################################" >> $PCSX2_LOG 2>&1
+fi

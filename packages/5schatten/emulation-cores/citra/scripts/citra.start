@@ -1,0 +1,40 @@
+#!/bin/sh
+# SPDX-License-Identifier: GPL-2.0-or-later
+# Copyright (C) 2018-present 5schatten (https://github.com/5schatten)
+
+. /etc/profile
+
+CITRA_HOME_CONFIG=/storage/.config/citra-emu
+CITRA_HOME_LOCAL=/storage/.local/share/citra-emu
+CITRA_QTCONFIG=$CITRA_HOME_CONFIG/qt-config.ini
+
+# Freeze Kodi / stop audio
+kodifreeze.sh freeze
+
+# create link to config directory
+if [ ! -L $CITRA_HOME_LOCAL ]; then
+  cp -r $CITRA_HOME_LOCAL/* $CITRA_HOME_CONFIG/
+  rm -rf $CITRA_HOME_LOCAL
+  ln -s $CITRA_HOME_CONFIG $CITRA_HOME_LOCAL
+fi
+
+# Set SDL audio driver to PulseAudio or ALSA
+set_SDL_audiodriver
+
+# Change refresh rate to 60Hz
+set_refresh_rate_60
+
+# force SDL2 audio engine
+set_CITRA_audioengine
+
+# force fullscreen on startup
+set_CITRA_videosettings
+
+# create link for citra log file
+ln -s $CITRA_HOME_CONFIG/log/citra_log.txt /var/log/citra.log
+
+# run citra
+citra-qt "$@" > /var/log/citra-qt.log 2>&1
+
+# Switch back to ES or unfreeze Kodi
+pidof emulationstation > /dev/null 2>&1 || kodifreeze.sh unfreeze
